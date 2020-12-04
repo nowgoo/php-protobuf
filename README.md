@@ -4,7 +4,7 @@ simple protobuf encoder and decoder
 # features
 - no need to compile .proto files
 - decode & encode without a scheme definition
-- grpc client [tbd]
+- grpc client [wip]
 
 # install
 ```
@@ -51,17 +51,17 @@ $decoded = $scheme->decode($binary);
 // $decoded == ['foo'=>123456, 'bar'=>['bar_sub'=>'hello, world'], 'baz'=>[3,270,86942]];
 ```
 
-## decode/encode without a scheme
+## decode/encode without a scheme definition
 ``` php
 $scheme = new UniversalScheme();
 $binary = $scheme->encode([
-    'foo' => 123456,
-    'bar' => 'hello',
-    'level1' => [
-        'level2' => [
-            'level3' => 'level 3 value'
+    'keys' => 123456,
+    'were' => 'hello',
+    'skipped' => [
+        'during' => [
+            'encoding' => 'level 3 value'
         ],
-        'otherkey' => 'level 2 value',
+        'process' => 'level 2 value',
     ],
 ]);
 
@@ -82,7 +82,7 @@ $decoded:
 ```
 
 ## grpc
-tbd
+[wip]
 
 # licence
 MIT License
