@@ -1,0 +1,17 @@
+{
+    "name": "nowgoo/php-protobuf",
+    "description": "simple protobuf encoder and decoder",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "nowgoo",
+            "email": "nowgoo@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {},
+    "autoload": {
+        "classmap": ["src/"]
+    }
+}
