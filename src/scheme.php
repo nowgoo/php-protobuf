@@ -151,3 +151,87 @@ class Scheme {
         return $decoded;
     }
 }
+
+class UniversalScheme
+{
+    public function decode($bin)
+    {
+        if (is_array($bin)) {
+            array_unshift($bin, 0);
+            unset($bin[0]);
+            $bytes = $bin;
+        } else {
+            $bytes = unpack('C*', $bin);
+        }
+
+        $decoded = [];
+        $len = count($bytes);
+        for ($i = 1; $i <= $len;) {
+            $byte = $bytes[$i++];
+            $index = $byte >> 3;
+
+            $wire = $byte & 7;
+            $value_bytes = [];
+            if ($wire === Scheme::WIRE_VARINT) {
+                do {
+                    $b = $bytes[$i++];
+                    $value_bytes[] = $b;
+                } while (($b & 0x80) === 0x80);
+                $field = new IntField();
+            } elseif ($wire === Scheme::WIRE_LENGTH_DELIMITED) {
+                $value_length = $bytes[$i];
+                $value_bytes = array_slice($bytes, $i++, $value_length);
+                $i += $value_length;
+                // string or array?
+                $first = $value_bytes[0];
+                if (($first >> 3) < 10) {
+                    $field = new UniversalScheme();
+                } else {
+                    $field = new StringField();
+                }
+            } elseif ($wire === Scheme::WIRE_32BIT) {
+                $value_bytes = array_slice($bytes, $i-1, 4);
+                $i += 4;
+                $field = new Fixed32Field();
+            } elseif ($wire === Scheme::WIRE_64BIT) {
+                $value_bytes = array_slice($bytes, $i-1, 8);
+                $i += 8;
+                $field = new Fixed64Field();
+            } else {
+                throw new DecodeException("decode failed: unsupported wire type");
+            }
+
+            $old = $decoded[$index] ?? null;
+            $decoded[$index] = $field->merge($old, $field->decode($value_bytes));
+        }
+        return $decoded;
+    }
+
+    public function encode($value, $return_bin=true)
+    {
+        $bytes = [];
+        $i = 1;
+        foreach ($value as $val) {
+            if (is_int($val)) {
+                $field = new IntField();
+            } elseif (is_string($val)) {
+                $field = new StringField();
+            } elseif (is_array($val)) {
+                $field = new UniversalScheme();
+            }
+            $bytes = array_merge($bytes, $field->encodeField($i++, $val));
+        }
+        return $return_bin ? implode(array_map("chr", $bytes)) : $bytes;
+    }
+
+    public function merge($old, $new)
+    {
+        return $old ? array_merge($old, $new) : $new;
+    }
+
+    public function encodeField($index, $value)
+    {
+        $encoded = $this->encode($value, false);
+        return array_merge([($index << 3) + Scheme::WIRE_LENGTH_DELIMITED, count($encoded)], $encoded);
+    }
+}

@@ -3,7 +3,7 @@ simple protobuf encoder and decoder
 
 # features
 - no need to compile .proto files
-- decode & encode without a scheme definition [tbd]
+- decode & encode without a scheme definition
 - grpc client [tbd]
 
 # install
@@ -13,7 +13,20 @@ composer require nowgoo/php-protobuf dev-master
 
 # usage
 
-## basic
+say we have a .proto defined as:
+```
+message Example {
+    int32 foo = 1;
+    SubMessage bar = 2;
+    repeated baz = 3;
+}
+
+message SubMessage {
+    string bar_sub = 1;
+}
+```
+code talks:
+
 ``` php
 use \PhpProtobuf\Scheme;
 $scheme = new Scheme([
@@ -38,8 +51,35 @@ $decoded = $scheme->decode($binary);
 // $decoded == ['foo'=>123456, 'bar'=>['bar_sub'=>'hello, world'], 'baz'=>[3,270,86942]];
 ```
 
-## no scheme
-tbd
+## decode/encode without a scheme
+``` php
+$scheme = new UniversalScheme();
+$binary = $scheme->encode([
+    'foo' => 123456,
+    'bar' => 'hello',
+    'level1' => [
+        'level2' => [
+            'level3' => 'level 3 value'
+        ],
+        'otherkey' => 'level 2 value',
+    ],
+]);
+
+$decoded = $scheme->decode($binary);
+/*
+$decoded:
+[
+    1 => 123456,
+    2 => 'hello',
+    3 => [
+        1 => [
+            1 => 'level 3 value'
+        ],
+        2 => 'level 2 value',
+    ],
+]
+*/
+```
 
 ## grpc
 tbd
