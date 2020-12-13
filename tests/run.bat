@@ -1,0 +1,1 @@
+@phpunit.bat --bootstrap bootstrap.php BasicTest

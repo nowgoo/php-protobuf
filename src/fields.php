@@ -118,6 +118,9 @@ class IntField extends BaseField
 
     public function encode($value)
     {
+        if (!is_int($value)) {
+            throw new EncodeException("int field '{$this->name}' is unable to encode ". gettype($value) ." values");
+        }
         if ($value > 0) {
             return $this->encode_varint($value);
         }
@@ -156,6 +159,12 @@ class UIntField extends BaseField
 
     public function encode($value)
     {
+        if (!is_int($value)) {
+            throw new EncodeException("uint field '{$this->name}' is unable to encode ". gettype($value) ." values");
+        }
+        if ($value < 0) {
+            throw new EncodeException("uint field '{$this->name}' is unable to encode negative value: $value");
+        }
         return $this->encode_varint($value);
     }
 }
@@ -168,17 +177,20 @@ class SIntField extends BaseField
 
     public function decode($bytes)
     {
-        $is_negative = $bytes[0] & 1;
         $n = 0;
         foreach ($bytes as $i => $byte) {
             $n += ($byte & 0x7F) << ($i * 7);
         }
-        return $is_negative ? -1 - ($n >> 1) : $n;
+        $is_negative = $n & 1;
+        return $is_negative ? -1 - ($n >> 1) : $n >> 1;
     }
 
     public function encode($value)
     {
-        $value = ($value > 0) ? (2 * $value) : (-2 * $value - 1);
+        if (!is_int($value)) {
+            throw new EncodeException("sint field '{$this->name}' is unable to encode ". gettype($value) ." values");
+        }
+        $value = ($value >= 0) ? (2 * $value) : (-2 * $value - 1);
         return $this->encode_varint($value);
     }
 }
@@ -196,6 +208,9 @@ class BoolField extends BaseField
 
     public function encode($value)
     {
+        if (!is_bool($value)) {
+            throw new EncodeException("bool field '{$this->name}' is unable to encode ". gettype($value) ." values");
+        }
         return $value ? [1] : [];
     }
 }
@@ -208,12 +223,19 @@ class StringField extends BaseField
 
     public function decode($bytes)
     {
-        //array_shift($bytes);
+        $i = 0;
+        do {
+            $b = $bytes[$i++];
+        } while (($b & 0x80) === 0x80);
+        $bytes = array_slice($bytes, $i);
         return implode(array_map("chr", $bytes));
     }
 
     public function encode($value)
     {
+        if (!is_string($value)) {
+            throw new EncodeException("string field '{$this->name}' is unable to encode ". gettype($value) ." values");
+        }
         $ret = unpack('C*', $value);
         $ret = array_merge($this->encode_varint(count($ret)), $ret);
         return $ret;
@@ -234,6 +256,9 @@ class FloatField extends BaseField
 
     public function encode($value)
     {
+        if (!is_float($value)) {
+            throw new EncodeException("float field '{$this->name}' is unable to encode ". gettype($value) ." values");
+        }
         return array_slice(unpack('C*', pack('f', $value)), 0);
     }
 }
@@ -254,6 +279,9 @@ class DoubleField extends BaseField
 
     public function encode($value)
     {
+        if (!is_double($value)) {
+            throw new EncodeException("double field '{$this->name}' is unable to encode ". gettype($value) ." values");
+        }
         return array_slice(unpack('C*', pack('d', $value)), 0);
     }
 }
@@ -266,11 +294,18 @@ class BytesField extends BaseField
 
     public function decode($bytes)
     {
-        return array_slice($bytes, 1);
+        $i = 0;
+        do {
+            $b = $bytes[$i++];
+        } while (($b & 0x80) === 0x80);
+        return array_slice($bytes, $i);
     }
 
     public function encode($value)
     {
+        if (!is_array($value)) {
+            throw new EncodeException("bytes field '{$this->name}' is unable to encode ". gettype($value) ." values");
+        }
         $value = array_merge($this->encode_varint(count($value)), $value);
         return $value;
     }
@@ -291,6 +326,12 @@ class Fixed32Field extends BaseField
 
     public function encode($value)
     {
+        if (!is_int($value)) {
+            throw new EncodeException("fixed32 field '{$this->name}' is unable to encode ". gettype($value) ." values");
+        }
+        if ($value < 0 || $value > 4294967295) {
+            throw new EncodeException("fixed32 field '{$this->name}' is unable to encode value $value");
+        }
         return array_slice(unpack('C*', pack('V', $value)), 0);
     }
 }
@@ -310,6 +351,12 @@ class SFixed32Field extends BaseField
 
     public function encode($value)
     {
+        if (!is_int($value)) {
+            throw new EncodeException("sfixed32 field '{$this->name}' is unable to encode ". gettype($value) ." values");
+        }
+        if (!is_int($value) || $value < -2147483648 || $value > 2147483647) {
+            throw new EncodeException("sfixed32 '{$this->name}' is unable to encode value $value");
+        }
         return array_slice(unpack('C*', pack('l', $value)), 0);
     }
 }
@@ -329,6 +376,12 @@ class Fixed64Field extends BaseField
 
     public function encode($value)
     {
+        if (!is_int($value)) {
+            throw new EncodeException("fixed64 field '{$this->name}' is unable to encode ". gettype($value) ." values");
+        }
+        if ($value < 0) {
+            throw new EncodeException("fixed64 field '{$this->name}' is unable to encode value $value");
+        }
         return array_slice(unpack('C*', pack('P', $value)), 0);
     }
 }
@@ -348,6 +401,9 @@ class SFixed64Field extends BaseField
 
     public function encode($value)
     {
+        if (!is_int($value)) {
+            throw new EncodeException("sfixed64 field '{$this->name}' is unable to encode ". gettype($value) ." values");
+        }
         return array_slice(unpack('C*', pack('q', $value)), 0);
     }
 }

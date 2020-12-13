@@ -114,8 +114,13 @@ class Scheme {
                     $value_bytes[] = $b;
                 } while (($b & 0x80) === 0x80);
             } elseif ($wire === Scheme::WIRE_LENGTH_DELIMITED) {
-                $value_length = $bytes[$i];
-                $value_bytes = array_slice($bytes, $i++, $value_length);
+                $value_length = 0;
+                $j = 0;
+                do {
+                    $b = $bytes[$i++];
+                    $value_length += ($b & 0x7F) << ($j++ * 7);
+                } while (($b & 0x80) === 0x80);
+                $value_bytes = array_slice($bytes, $i+$j, $value_length);
                 $i += $value_length;
             } elseif ($wire === Scheme::WIRE_32BIT) {
                 $value_bytes = array_slice($bytes, $i-1, 4);
